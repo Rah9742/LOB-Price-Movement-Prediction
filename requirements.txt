@@ -1,0 +1,5 @@
+numpy==2.2.4
+scikit-learn==1.8.0
+matplotlib==3.10.6
+xgboost==3.2.0
+torch==2.10.0
