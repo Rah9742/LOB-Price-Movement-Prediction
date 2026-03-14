@@ -9,6 +9,41 @@ The models are trained and evaluated on **FI-2010 folds 7, 8, and 9**, using **N
 A full methodological description and experimental results are available in the project documentation. See: **reports/Summary.docx**.
 
 
+# Environment Setup
+
+Create and use a local virtual environment in the repository root:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+The project has been tested with **Python 3.13** in `.venv`.
+
+If your existing `.venv` was created with global packages enabled, recreate it so the environment stays isolated:
+
+```bash
+rm -rf .venv
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
+To reactivate the environment later:
+
+```bash
+source .venv/bin/activate
+```
+
+On macOS, `xgboost` also requires the OpenMP runtime:
+
+```bash
+brew install libomp
+```
+
+
 # Project Overview
 
 The task is to predict the **direction of the mid-price movement** in a limit order book over the next **k = 5 events**.
@@ -177,13 +212,14 @@ The results demonstrate the strong value of **temporal modelling** for limit ord
 
 Example workflow:
 
-```
-python3 -m src.ridge_regression
-python3 -m src.logistic_regression
-python3 -m src.mlp_model
-python3 -m src.random_forest
-python3 -m src.xgboost_model
-python3 -m src.lstm_model
+```bash
+source .venv/bin/activate
+python -m src.ridge_regression
+python -m src.logistic_regression
+python -m src.mlp_model
+python -m src.random_forest
+python -m src.xgboost_model
+python -m src.lstm_model
 ```
 
 Each script:
