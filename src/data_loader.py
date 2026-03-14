@@ -13,7 +13,8 @@ Setup
 - Folds 7, 8, 9 only
 - Label: row 148 (0-indexed: row 147) = horizon k=5
 - Features: all 144 rows (0-indexed: rows 0-143)
-- Validation: last 1/fold fraction of training data
+- Validation: final training day when it can be inferred from the
+  preceding test fold, otherwise fallback to the historical 1/fold split
 - Test set: untouched until final evaluation
 
 Directory structure expected
@@ -90,6 +91,15 @@ def load_raw_fold(data_dir: str, split: str, fold: int) -> np.ndarray:
             f"Check data_dir='{data_dir}' and that the file follows the\n"
             f"naming convention: Train/Test_Dst_NoAuction_ZScore_CF_N.txt"
         )
+
+    with path.open("r", encoding="utf-8", errors="ignore") as handle:
+        first_line = handle.readline().strip()
+    if first_line == "version https://git-lfs.github.com/spec/v1":
+        raise RuntimeError(
+            f"{path} is a Git LFS pointer, not the dataset contents. "
+            "Fetch the real data with `git lfs pull` before training."
+        )
+
     return np.loadtxt(path)
 
 
@@ -119,8 +129,8 @@ def train_val_split(X: np.ndarray, y: np.ndarray, fold: int):
     """
     Carve the last 1/fold fraction of training data as validation.
 
-    For fold k the training file contains k days. The last day
-    (approx 1/k of the data) is held out as the validation set.
+    This is a fallback used when the exact size of the last training
+    day cannot be inferred from the preceding fold.
 
     Parameters
     ----------
@@ -143,6 +153,33 @@ def train_val_split(X: np.ndarray, y: np.ndarray, fold: int):
     y_val   = y[split_idx:]
 
     return X_train, y_train, X_val, y_val
+
+
+def infer_validation_size(data_dir: str,
+                          fold: int,
+                          known_test_sizes: dict[int, int] | None = None) -> int | None:
+    """
+    Infer the size of the last training day for fold k.
+
+    For FI-2010, `Train_CF_k` contains days 1..k and `Test_CF_{k-1}`
+    contains day k. When the previous test file is available, its size
+    gives the exact size of the last day that should be used as validation.
+
+    Fold 7 has no preceding test file in this repo, so callers may need
+    to fall back to the historical 1/k proportional split.
+    """
+    previous_fold = fold - 1
+    if known_test_sizes and previous_fold in known_test_sizes:
+        return known_test_sizes[previous_fold]
+
+    previous_test = resolve_data_dir(data_dir) / (
+        f"Test_Dst_NoAuction_ZScore_CF_{previous_fold}.txt"
+    )
+    if not previous_test.exists():
+        return None
+
+    raw_previous_test = np.loadtxt(previous_test)
+    return raw_previous_test.shape[1]
 
 
 def load_folds(data_dir: str = "./data",
@@ -179,6 +216,7 @@ def load_folds(data_dir: str = "./data",
         print("-" * 60)
 
     folds = []
+    test_sizes = {}
     for fold in folds_to_use:
         # Load raw files
         raw_train = load_raw_fold(data_dir, "Train", fold)
@@ -187,9 +225,28 @@ def load_folds(data_dir: str = "./data",
         # Extract features and labels
         X_all, y_all   = extract_features_labels(raw_train, label_row)
         X_test, y_test = extract_features_labels(raw_test,  label_row)
+        test_sizes[fold] = X_test.shape[0]
 
         # Split training into train + val
-        X_train, y_train, X_val, y_val = train_val_split(X_all, y_all, fold)
+        validation_size = infer_validation_size(
+            data_dir, fold, known_test_sizes=test_sizes
+        )
+        if validation_size is None:
+            X_train, y_train, X_val, y_val = train_val_split(X_all, y_all, fold)
+            split_note = f"fallback 1/{fold} split (previous fold unavailable)"
+        else:
+            split_idx = X_all.shape[0] - validation_size
+            if split_idx <= 0:
+                raise ValueError(
+                    f"Invalid validation size {validation_size} for fold {fold}"
+                )
+            X_train = X_all[:split_idx, :]
+            y_train = y_all[:split_idx]
+            X_val   = X_all[split_idx:, :]
+            y_val   = y_all[split_idx:]
+            split_note = (
+                f"last day inferred from Test_Dst_NoAuction_ZScore_CF_{fold - 1}.txt"
+            )
 
         if verbose:
             n_tr  = X_train.shape[0]
@@ -197,7 +254,7 @@ def load_folds(data_dir: str = "./data",
             n_te  = X_test.shape[0]
             print(f"  Fold {fold}:")
             print(f"    Train : {n_tr:>7,} samples")
-            print(f"    Val   : {n_val:>7,} samples  (last 1/{fold} of training)")
+            print(f"    Val   : {n_val:>7,} samples  ({split_note})")
             print(f"    Test  : {n_te:>7,} samples")
             _print_class_dist("    Train label dist", y_train)
             _print_class_dist("    Val   label dist", y_val)
@@ -263,6 +320,10 @@ def make_sequences(X: np.ndarray, y: np.ndarray,
     y_seq : np.ndarray, shape (n_samples - window + 1,)
     """
     n        = X.shape[0]
+    if n < window:
+        raise ValueError(
+            f"Cannot create window={window} sequences from only {n} samples"
+        )
     n_seq    = n - window + 1
     X_seq    = np.zeros((n_seq, window, X.shape[1]), dtype=np.float32)
 

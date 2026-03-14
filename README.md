@@ -11,6 +11,15 @@ A full methodological description and experimental results are available in the 
 
 # Environment Setup
 
+If you are cloning this repository on a new machine, install Git LFS first so the dataset files in `data/` are downloaded correctly:
+
+```bash
+git lfs install
+git clone https://github.com/Rah9742/LOB-Price-Movement-Prediction.git
+cd LOB-Price-Movement-Prediction
+git lfs pull
+```
+
 Create and use a local virtual environment in the repository root:
 
 ```bash
@@ -228,6 +237,12 @@ Each script:
 2. Trains the model
 3. Evaluates using `evaluator.py`
 4. Saves results to `reports/`
+
+Generated outputs:
+
+- CSV metrics are saved in `reports/`
+- Random Forest feature importance plots are saved in `reports/plot_rf_importance_*.png`
+- XGBoost feature importance plots are saved in `reports/plot_xgb_importance_*.png`
 
 
 # Hardware Acceleration
