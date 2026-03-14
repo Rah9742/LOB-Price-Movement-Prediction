@@ -1,0 +1,4 @@
+model,fold,accuracy,f1_macro,f1_up,f1_stat,f1_down,precision,recall
+Ridge Regression,7,0.4638,0.4381,0.3595,0.5614,0.3933,0.4429,0.4495
+Ridge Regression,8,0.4693,0.4478,0.3724,0.5661,0.4049,0.4476,0.4502
+Ridge Regression,9,0.4653,0.426,0.3078,0.5921,0.3782,0.4423,0.4364

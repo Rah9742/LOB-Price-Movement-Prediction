@@ -1,0 +1,4 @@
+model,fold,accuracy,f1_macro,f1_up,f1_stat,f1_down,precision,recall
+Random Forest,7,0.5926,0.5562,0.4989,0.7012,0.4687,0.5548,0.5595
+Random Forest,8,0.6214,0.5733,0.489,0.7424,0.4886,0.5905,0.5685
+Random Forest,9,0.5523,0.5278,0.4708,0.6547,0.4578,0.54,0.5287

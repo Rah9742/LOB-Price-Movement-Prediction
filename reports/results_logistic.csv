@@ -1,0 +1,4 @@
+model,fold,accuracy,f1_macro,f1_up,f1_stat,f1_down,precision,recall
+Logistic Regression,7,0.4683,0.4419,0.3629,0.5677,0.3953,0.4469,0.4532
+Logistic Regression,8,0.4703,0.4496,0.3739,0.5667,0.408,0.4494,0.4522
+Logistic Regression,9,0.4647,0.4265,0.3109,0.5914,0.3773,0.4414,0.4362
