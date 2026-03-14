@@ -31,7 +31,8 @@ near the top of the script with one of the following:
 Evaluation
 ----------
 - Folds 7, 8, 9 (matching all other models)
-- Validation set = last 1/fold fraction of training data
+- Validation set = final training day, with prior-split context
+  prepended for sequence evaluation
 - Early stopping on validation loss (patience = 10 epochs)
 - Test set untouched until final evaluation
 - Reports macro F1, accuracy, per-class F1 across all 3 folds
@@ -184,10 +185,33 @@ def prepare_loaders(X_train: np.ndarray, y_train: np.ndarray,
     -------
     train_loader, val_loader, test_loader, class_weights_tensor
     """
-    # Create sliding window sequences
+    def make_split_sequences(context_X: np.ndarray,
+                             split_X: np.ndarray,
+                             split_y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """Build one window per target in split_X using preceding context."""
+        context_len = window - 1
+        if context_len <= 0:
+            return split_X[:, None, :], split_y
+
+        if len(context_X) < context_len:
+            raise ValueError(
+                f"Need at least {context_len} context rows, got {len(context_X)}"
+            )
+
+        combined_X = np.vstack([context_X[-context_len:], split_X])
+        X_seq = np.zeros((len(split_X), window, split_X.shape[1]),
+                         dtype=np.float32)
+
+        for i in range(len(split_X)):
+            X_seq[i] = combined_X[i:i + window]
+
+        return X_seq, split_y.copy()
+
+    # Train sequences do not have preceding context, so the first `window-1`
+    # targets are unavailable. Validation/test use the prior split as context.
     X_tr_seq, y_tr_seq = make_sequences(X_train, y_train, window)
-    X_va_seq, y_va_seq = make_sequences(X_val,   y_val,   window)
-    X_te_seq, y_te_seq = make_sequences(X_test,  y_test,  window)
+    X_va_seq, y_va_seq = make_split_sequences(X_train, X_val, y_val)
+    X_te_seq, y_te_seq = make_split_sequences(X_val, X_test, y_test)
 
     # Remap labels 1,2,3 -> 0,1,2 for PyTorch
     y_tr_seq = y_tr_seq - 1

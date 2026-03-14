@@ -16,7 +16,9 @@ Hyperparameter tuning on validation set (matching Random Forest):
     - max_depth    : maximum depth of each tree
     - learning_rate: step size shrinkage
 
-Early stopping used during final training to prevent overfitting.
+Final training reuses the tuned hyperparameters on train+val
+without early stopping so the tuning and final fit use the
+same training regime.
 
 Evaluation
 ----------
@@ -36,12 +38,13 @@ Dependencies: numpy, xgboost, scikit-learn, matplotlib,
 
 import numpy as np
 import matplotlib.pyplot as plt
+from pathlib import Path
 from xgboost import XGBClassifier
 from sklearn.metrics import f1_score
 from sklearn.utils.class_weight import compute_sample_weight
 
 from src.data_loader import load_folds
-from src.evaluator import Evaluator
+from src.evaluator import Evaluator, DEFAULT_REPORTS_DIR
 
 # -------------------------------------------------
 # CONFIGURATION
@@ -50,7 +53,6 @@ DATA_DIR        = "data"
 N_ESTIMATORS    = [100, 200, 300]       # number of boosting rounds
 MAX_DEPTH       = [3, 6, 10]            # tree depth
 LEARNING_RATE   = [0.01, 0.05, 0.1]    # step size
-EARLY_STOPPING  = 20                    # stop if no improvement for N rounds
 # -------------------------------------------------
 
 # Feature group boundaries (0-indexed) — same as Random Forest
@@ -112,8 +114,6 @@ def tune_hyperparameters(X_train: np.ndarray, y_train: np.ndarray,
 
     # Remap labels to 0-indexed
     y_tr  = to_xgb_labels(y_train)
-    y_va  = to_xgb_labels(y_val)
-
     # Sample weights for class imbalance
     sample_weights = compute_sample_weight("balanced", y_tr)
 
@@ -135,7 +135,6 @@ def tune_hyperparameters(X_train: np.ndarray, y_train: np.ndarray,
                     num_class             = 3,
                     use_label_encoder     = False,
                     eval_metric           = "mlogloss",
-                    early_stopping_rounds = EARLY_STOPPING,
                     n_jobs                = -1,
                     random_state          = 42,
                     verbosity             = 0
@@ -143,7 +142,6 @@ def tune_hyperparameters(X_train: np.ndarray, y_train: np.ndarray,
                 model.fit(
                     X_train, y_tr,
                     sample_weight = sample_weights,
-                    eval_set      = [(X_val, y_va)],
                     verbose       = False
                 )
                 y_pred = from_xgb_labels(model.predict(X_val))
@@ -240,7 +238,8 @@ def plot_feature_importance(importances: np.ndarray,
                  f"{imp:.3f}", ha="center", va="bottom", fontsize=8)
 
     plt.tight_layout()
-    out = out_path or f"plot_xgb_importance_fold{fold}.png"
+    out = Path(out_path) if out_path else DEFAULT_REPORTS_DIR / f"plot_xgb_importance_fold{fold}.png"
+    out.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(out, dpi=150, bbox_inches="tight")
     print(f"    Feature importance plot saved -> {out}")
     plt.show()
@@ -316,7 +315,7 @@ def run(data_dir: str = DATA_DIR):
     print("\n  Plotting average feature importance across folds 7, 8, 9...")
     avg_importances = np.mean(all_importances, axis=0)
     plot_feature_importance(avg_importances, fold="avg",
-                            out_path="plot_xgb_importance_avg.png")
+                            out_path=str(DEFAULT_REPORTS_DIR / "plot_xgb_importance_avg.png"))
 
     # --- Final summary ---
     evaluator.summary("XGBoost")

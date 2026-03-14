@@ -33,11 +33,12 @@ Dependencies: numpy, scikit-learn, matplotlib, data_loader, evaluator
 
 import numpy as np
 import matplotlib.pyplot as plt
+from pathlib import Path
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import f1_score
 
 from src.data_loader import load_folds
-from src.evaluator import Evaluator
+from src.evaluator import Evaluator, DEFAULT_REPORTS_DIR
 
 # -------------------------------------------------
 # CONFIGURATION
@@ -198,7 +199,8 @@ def plot_feature_importance(importances: np.ndarray,
                  f"{imp:.3f}", ha="center", va="bottom", fontsize=8)
 
     plt.tight_layout()
-    out = out_path or f"plot_rf_importance_fold{fold}.png"
+    out = Path(out_path) if out_path else DEFAULT_REPORTS_DIR / f"plot_rf_importance_fold{fold}.png"
+    out.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(out, dpi=150, bbox_inches="tight")
     print(f"    Feature importance plot saved -> {out}")
     plt.show()
@@ -263,7 +265,7 @@ def run(data_dir: str = DATA_DIR):
     print("\n  Plotting average feature importance across folds 7, 8, 9...")
     avg_importances = np.mean(all_importances, axis=0)
     plot_feature_importance(avg_importances, fold="avg",
-                            out_path="plot_rf_importance_avg.png")
+                            out_path=str(DEFAULT_REPORTS_DIR / "plot_rf_importance_avg.png"))
 
     # --- Final summary ---
     evaluator.summary("Random Forest")
