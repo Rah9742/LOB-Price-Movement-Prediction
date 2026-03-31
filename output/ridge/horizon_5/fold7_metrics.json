@@ -22,6 +22,6 @@
     }
   },
   "best_params": {
-    "lambda": 1e-05
+    "lambda": 1.0
   }
 }
