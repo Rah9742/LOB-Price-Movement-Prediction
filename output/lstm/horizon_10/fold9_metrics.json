@@ -1,0 +1,30 @@
+{
+  "fold": 9,
+  "accuracy": 0.727087,
+  "macro_precision": 0.727989,
+  "macro_recall": 0.733498,
+  "macro_f1": 0.729441,
+  "per_class": {
+    "Up": {
+      "precision": 0.756487,
+      "recall": 0.676034,
+      "f1": 0.714001
+    },
+    "Stationary": {
+      "precision": 0.733842,
+      "recall": 0.793084,
+      "f1": 0.762314
+    },
+    "Down": {
+      "precision": 0.69364,
+      "recall": 0.731376,
+      "f1": 0.712008
+    }
+  },
+  "best_params": {
+    "hidden_size": 64,
+    "num_layers": 1,
+    "lr": 0.001,
+    "dropout": 0.2
+  }
+}

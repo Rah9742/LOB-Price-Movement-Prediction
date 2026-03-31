@@ -53,14 +53,13 @@ from torch.utils.data import DataLoader, TensorDataset
 from sklearn.metrics import f1_score
 from sklearn.utils.class_weight import compute_class_weight
 
+from src.config import parse_args
 from src.data_loader import load_folds, make_sequences
 from src.evaluator import Evaluator
 
 # -------------------------------------------------
 # CONFIGURATION
 # -------------------------------------------------
-DATA_DIR    = "data"
-FOLDS       = [7, 8, 9]   # all 3 folds — matches other models
 WINDOW      = 100          # timesteps per sequence — matches DeepLOB standard
 HIDDEN_SIZE = 64           # LSTM hidden units
 NUM_LAYERS  = 1            # number of stacked LSTM layers
@@ -68,6 +67,8 @@ BATCH_SIZE  = 256          # larger batch = faster on MPS/CUDA
 MAX_EPOCHS  = 50           # maximum training epochs
 PATIENCE    = 10           # early stopping patience — number of epochs
                            # without improvement before training stops
+MAX_EPOCHS_DEBUG = 3
+PATIENCE_DEBUG   = 2
 LR          = 0.001        # Adam optimiser learning rate
 DROPOUT     = 0.2          # dropout rate applied after LSTM layer
 # -------------------------------------------------
@@ -402,13 +403,16 @@ def train_model(model, train_loader, val_loader,
 # MAIN TRAINING LOOP
 # ==================================================
 
-def run(data_dir: str = DATA_DIR):
+def run(data_dir: str = "./data", horizon: int = 5, debug: bool = False):
     print("=" * 60)
-    print("  LSTM — FI-2010 LOB")
+    print(f"  LSTM — horizon k={horizon}{'  [DEBUG]' if debug else ''}")
+    print(f"  Device: {DEVICE}")
     print("=" * 60 + "\n")
 
-    folds     = load_folds(data_dir=data_dir, folds_to_use=FOLDS)
-    evaluator = Evaluator()
+    folds = load_folds(data_dir=data_dir, horizon=horizon, debug=debug)
+    evaluator = Evaluator("lstm", horizon)
+    max_epochs = MAX_EPOCHS_DEBUG if debug else MAX_EPOCHS
+    patience = PATIENCE_DEBUG if debug else PATIENCE
 
     for fold_data in folds:
         fold             = fold_data["fold"]
@@ -441,8 +445,8 @@ def run(data_dir: str = DATA_DIR):
         # --- Train with early stopping ---
         model, history = train_model(
             model, train_loader, val_loader, class_weights,
-            max_epochs = MAX_EPOCHS,
-            patience   = PATIENCE,
+            max_epochs = max_epochs,
+            patience   = patience,
             lr         = LR
         )
 
@@ -457,21 +461,30 @@ def run(data_dir: str = DATA_DIR):
         test_preds = test_preds + 1
         test_true  = test_true  + 1
 
-        # --- Record results via shared evaluator ---
-        evaluator.record("LSTM", fold, test_true, test_preds)
+        # --- Record output via shared evaluator ---
+        evaluator.record(
+            fold,
+            test_true,
+            test_preds,
+            history=history,
+            best_params={
+                "window": WINDOW,
+                "hidden_size": HIDDEN_SIZE,
+                "num_layers": NUM_LAYERS,
+                "lr": LR,
+                "dropout": DROPOUT,
+            },
+        )
 
         # --- Save trained model weights ---
         # To reload later without retraining:
         #   model = LOB_LSTM()
         #   model.load_state_dict(torch.load(f"lstm_fold{fold}.pt"))
-        save_path = f"lstm_fold{fold}.pt"
+        save_path = evaluator.results_dir / f"fold{fold}_weights.pt"
         torch.save(model.state_dict(), save_path)
         print(f"    Model weights saved -> {save_path}")
 
-    # --- Final summary across all folds ---
-    evaluator.summary("LSTM")
-    evaluator.save("results_lstm.csv")
-
+    evaluator.summary()
     return evaluator
 
 
@@ -480,6 +493,5 @@ def run(data_dir: str = DATA_DIR):
 # ==================================================
 
 if __name__ == "__main__":
-    import sys
-    data_dir = sys.argv[1] if len(sys.argv) > 1 else DATA_DIR
-    run(data_dir=data_dir)
+    args = parse_args("LSTM — FI-2010 LOB")
+    run(args.data_dir, args.horizon, args.debug)

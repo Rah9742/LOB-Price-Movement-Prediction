@@ -1,0 +1,27 @@
+{
+  "fold": 8,
+  "accuracy": 0.506785,
+  "macro_precision": 0.42561,
+  "macro_recall": 0.457258,
+  "macro_f1": 0.41607,
+  "per_class": {
+    "Up": {
+      "precision": 0.227916,
+      "recall": 0.397927,
+      "f1": 0.289829
+    },
+    "Stationary": {
+      "precision": 0.811642,
+      "recall": 0.546634,
+      "f1": 0.653286
+    },
+    "Down": {
+      "precision": 0.237272,
+      "recall": 0.427214,
+      "f1": 0.305096
+    }
+  },
+  "best_params": {
+    "C": 0.01
+  }
+}
