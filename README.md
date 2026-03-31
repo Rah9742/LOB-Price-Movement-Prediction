@@ -236,13 +236,13 @@ Each script:
 1. Loads data using `data_loader.py`
 2. Trains the model
 3. Evaluates using `evaluator.py`
-4. Saves results to `reports/`
+4. Saves fold outputs and summaries to `output/<model>/horizon_<k>/`
 
 Generated outputs:
 
-- CSV metrics are saved in `reports/`
-- Random Forest feature importance plots are saved in `reports/plot_rf_importance_*.png`
-- XGBoost feature importance plots are saved in `reports/plot_xgb_importance_*.png`
+- Fold metrics, predictions, confusion matrices, histories, and model weights are saved in `output/<model>/horizon_<k>/`
+- Summary CSV files are saved in `output/<model>/horizon_<k>/summary.csv`
+- Plots are generated separately with `python -m src.plot_results` and saved in `reports/`
 
 
 # Hardware Acceleration

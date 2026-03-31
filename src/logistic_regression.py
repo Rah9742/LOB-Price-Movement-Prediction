@@ -27,7 +27,6 @@ def tune_C(X_train, y_train, X_val, y_val, C_grid, verbose=True):
     for C in C_grid:
         model = LogisticRegression(
             C=C,
-            multi_class="multinomial",
             solver="lbfgs",
             class_weight="balanced",
             max_iter=MAX_ITER,
@@ -73,7 +72,6 @@ def run(data_dir: str = "./data", horizon: int = 5, debug: bool = False):
 
         model = LogisticRegression(
             C=best_C,
-            multi_class="multinomial",
             solver="lbfgs",
             class_weight="balanced",
             max_iter=MAX_ITER,
