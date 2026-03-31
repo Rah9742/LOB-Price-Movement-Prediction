@@ -231,6 +231,34 @@ python -m src.xgboost_model
 python -m src.lstm_model
 ```
 
+To run multiple models and horizons in one command:
+
+```bash
+source .venv/bin/activate
+python -m src.run_all --models ridge logistic mlp random_forest xgboost lstm --horizons 1 5 10
+```
+
+To run all models for the default horizon only (`k=5`):
+
+```bash
+source .venv/bin/activate
+python -m src.run_all
+```
+
+To run all models for all supported horizons:
+
+```bash
+source .venv/bin/activate
+python -m src.run_all --horizons 1 5 10
+```
+
+To train and generate plots at the end of each horizon run:
+
+```bash
+source .venv/bin/activate
+python -m src.run_all --horizons 1 5 10 --plot all
+```
+
 Each script:
 
 1. Loads data using `data_loader.py`
@@ -243,6 +271,32 @@ Generated outputs:
 - Fold metrics, predictions, confusion matrices, histories, and model weights are saved in `output/<model>/horizon_<k>/`
 - Summary CSV files are saved in `output/<model>/horizon_<k>/summary.csv`
 - Plots are generated separately with `python -m src.plot_results` and saved in `reports/`
+
+To generate plots from saved outputs:
+
+```bash
+source .venv/bin/activate
+python -m src.plot_results --horizon 5 --plot all
+```
+
+Useful reporting commands:
+
+```bash
+# Generate all plots for horizon k=5
+python -m src.plot_results --horizon 5 --plot all
+
+# Generate only the model comparison chart
+python -m src.plot_results --horizon 5 --plot comparison
+
+# Generate plots for selected models only
+python -m src.plot_results --horizon 5 --models ridge logistic random_forest xgboost mlp lstm --plot all
+```
+
+Summaries are created automatically during training:
+
+- Per-model summaries: `output/<model>/horizon_<k>/summary.csv`
+- Combined training runs can be launched with `python -m src.run_all ...`, after which plots can be created from the saved `output/` files
+- `python -m src.run_all --horizons 1 5 10 --plot all` will train first and then generate reports for each requested horizon
 
 
 # Hardware Acceleration
