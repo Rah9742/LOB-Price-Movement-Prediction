@@ -1,24 +1,24 @@
 {
   "fold": 8,
-  "accuracy": 0.471824,
-  "macro_precision": 0.47393,
-  "macro_recall": 0.472817,
-  "macro_f1": 0.470898,
+  "accuracy": 0.486545,
+  "macro_precision": 0.485942,
+  "macro_recall": 0.485867,
+  "macro_f1": 0.484757,
   "per_class": {
     "Up": {
-      "precision": 0.472356,
-      "recall": 0.459132,
-      "f1": 0.46565
+      "precision": 0.487251,
+      "recall": 0.423574,
+      "f1": 0.453187
     },
     "Stationary": {
-      "precision": 0.495671,
-      "recall": 0.416965,
-      "f1": 0.452924
+      "precision": 0.503427,
+      "recall": 0.551378,
+      "f1": 0.526313
     },
     "Down": {
-      "precision": 0.453762,
-      "recall": 0.542353,
-      "f1": 0.494118
+      "precision": 0.467149,
+      "recall": 0.482647,
+      "f1": 0.474771
     }
   },
   "best_params": {
