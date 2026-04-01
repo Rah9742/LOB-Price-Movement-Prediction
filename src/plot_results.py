@@ -1,6 +1,7 @@
-"""Plot saved output from output/<model>/horizon_<k>/."""
+"""Plot saved output from output/<model>/horizon_<k>/ for one or more horizons."""
 
 import argparse
+import csv
 import json
 from pathlib import Path
 
@@ -9,16 +10,19 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-try:
-    import seaborn as sns
-    HAS_SEABORN = True
-except ImportError:
-    HAS_SEABORN = False
-
-
 ALL_MODELS = ["ridge", "logistic", "random_forest", "xgboost", "mlp", "lstm"]
 FOLDS = [7, 8, 9]
 CLASS_NAMES = ["Up", "Stationary", "Down"]
+PLOT_CHOICES = [
+    "all",
+    "confusion",
+    "loss",
+    "importance",
+    "comparison",
+    "comparison_avg",
+    "comparison_folds",
+    "heatmap",
+]
 
 
 FEATURE_GROUPS = {
@@ -39,6 +43,42 @@ def ensure_dir(path):
     Path(path).mkdir(parents=True, exist_ok=True)
 
 
+def _annotate_matrix(ax, data, fmt, threshold=None):
+    """Add contrast-aware text annotations to a heatmap."""
+    if threshold is None:
+        threshold = (float(np.max(data)) + float(np.min(data))) / 2.0
+    for row in range(data.shape[0]):
+        for col in range(data.shape[1]):
+            value = data[row, col]
+            color = "white" if value >= threshold else "#1f1f1f"
+            ax.text(col, row, format(value, fmt), ha="center", va="center", color=color, fontsize=8)
+
+
+def _draw_heatmap(ax, data, xlabels, ylabels, title, cmap, fmt, colorbar=True, aspect="auto"):
+    """Render a heatmap with adaptive text labels and optional colorbar."""
+    image = ax.imshow(data, cmap=cmap, aspect=aspect)
+    ax.set_title(title)
+    ax.set_xticks(np.arange(len(xlabels)))
+    ax.set_xticklabels(xlabels)
+    ax.set_yticks(np.arange(len(ylabels)))
+    ax.set_yticklabels(ylabels)
+    _annotate_matrix(ax, data, fmt)
+    if colorbar:
+        plt.colorbar(image, ax=ax, fraction=0.046, pad=0.04)
+    return image
+
+
+def _load_summary_rows(path):
+    """Load summary rows keyed by fold from one model summary CSV."""
+    rows = {}
+    with Path(path).open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        for row in reader:
+            fold = row["fold"]
+            rows[fold] = row
+    return rows
+
+
 def plot_confusion_matrices(models, horizon, results_root, out_dir):
     ensure_dir(out_dir)
     for model in models:
@@ -54,17 +94,17 @@ def plot_confusion_matrices(models, horizon, results_root, out_dir):
                 continue
             found = True
             cm = np.load(cm_path)
-            if HAS_SEABORN:
-                sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=CLASS_NAMES, yticklabels=CLASS_NAMES, ax=axes[i])
-            else:
-                axes[i].imshow(cm, cmap="Blues")
-                for r in range(3):
-                    for c in range(3):
-                        axes[i].text(c, r, str(cm[r, c]), ha="center", va="center")
-                axes[i].set_xticks([0, 1, 2])
-                axes[i].set_xticklabels(CLASS_NAMES)
-                axes[i].set_yticks([0, 1, 2])
-                axes[i].set_yticklabels(CLASS_NAMES)
+            _draw_heatmap(
+                axes[i],
+                cm,
+                CLASS_NAMES,
+                CLASS_NAMES,
+                f"Fold {fold}",
+                "Blues",
+                "d",
+                colorbar=True,
+                aspect="equal",
+            )
             axes[i].set_title(f"Fold {fold}")
             axes[i].set_xlabel("Predicted")
             axes[i].set_ylabel("True")
@@ -154,7 +194,7 @@ def plot_feature_importance(models, horizon, results_root, out_dir):
         plt.close(fig)
 
 
-def plot_comparison(models, horizon, results_root, out_dir):
+def plot_comparison_avg(models, horizon, results_root, out_dir):
     ensure_dir(out_dir)
     labels = []
     scores = []
@@ -178,7 +218,53 @@ def plot_comparison(models, horizon, results_root, out_dir):
     for bar, score in zip(bars, scores):
         plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height(), f"{score:.3f}", ha="center", va="bottom")
     plt.tight_layout()
-    out = Path(out_dir) / f"comparison_k{horizon}.png"
+    out = Path(out_dir) / f"comparison_avg_k{horizon}.png"
+    plt.savefig(out, dpi=150, bbox_inches="tight")
+    print(f"  Saved: {out}")
+    plt.close()
+
+
+def plot_comparison_folds(models, horizon, results_root, out_dir):
+    ensure_dir(out_dir)
+    labels = [f"Fold {fold}" for fold in FOLDS]
+    scores_by_model = []
+    model_labels = []
+    for model in models:
+        path = Path(results_root) / model / f"horizon_{horizon}" / "summary.csv"
+        if not path.exists():
+            continue
+        rows = _load_summary_rows(path)
+        fold_scores = []
+        complete = True
+        for fold in FOLDS:
+            key = str(fold)
+            if key not in rows:
+                complete = False
+                break
+            fold_scores.append(float(rows[key]["macro_f1"]))
+        if complete:
+            scores_by_model.append(fold_scores)
+            model_labels.append(model.replace("_", " ").title())
+    if not scores_by_model:
+        return
+
+    x = np.arange(len(FOLDS))
+    width = 0.8 / len(scores_by_model)
+    plt.figure(figsize=(12, 6))
+    for idx, (label, scores) in enumerate(zip(model_labels, scores_by_model)):
+        offset = (idx - (len(scores_by_model) - 1) / 2) * width
+        bars = plt.bar(x + offset, scores, width=width, label=label)
+        for bar, score in zip(bars, scores):
+            plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height(), f"{score:.3f}", ha="center", va="bottom", fontsize=8)
+    plt.xticks(x, labels)
+    plt.xlabel("Fold")
+    plt.ylabel("Macro F1")
+    plt.title(f"Model Comparison — Macro F1 (k={horizon})")
+    plt.ylim(0, max(max(scores) for scores in scores_by_model) * 1.1)
+    plt.grid(axis="y", alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+    out = Path(out_dir) / f"comparison_folds_k{horizon}.png"
     plt.savefig(out, dpi=150, bbox_inches="tight")
     print(f"  Saved: {out}")
     plt.close()
@@ -199,22 +285,25 @@ def plot_heatmap(models, horizon, results_root, out_dir):
                 metrics["per_class"]["Up"]["f1"],
                 metrics["per_class"]["Stationary"]["f1"],
                 metrics["per_class"]["Down"]["f1"],
+                metrics["macro_f1"],
             ])
             labels.append(f"{model}:{fold}")
     if not rows:
         return
     data = np.array(rows)
-    plt.figure(figsize=(8, max(4, len(labels) * 0.4)))
-    if HAS_SEABORN:
-        sns.heatmap(data, annot=True, fmt=".3f", cmap="YlGnBu", xticklabels=CLASS_NAMES, yticklabels=labels)
-    else:
-        plt.imshow(data, cmap="YlGnBu", aspect="auto")
-        plt.xticks(range(len(CLASS_NAMES)), CLASS_NAMES)
-        plt.yticks(range(len(labels)), labels)
-        for r in range(data.shape[0]):
-            for c in range(data.shape[1]):
-                plt.text(c, r, f"{data[r, c]:.3f}", ha="center", va="center")
-    plt.title(f"Per-Class F1 Heatmap — Horizon k={horizon}")
+    plt.figure(figsize=(9, max(4, len(labels) * 0.4)))
+    ax = plt.gca()
+    _draw_heatmap(
+        ax,
+        data,
+        ["Up", "Stationary", "Down", "Macro F1"],
+        labels,
+        f"Per-Class F1 Heatmap — Horizon k={horizon}",
+        "YlGnBu",
+        ".3f",
+        colorbar=True,
+        aspect="auto",
+    )
     plt.tight_layout()
     out = Path(out_dir) / f"heatmap_k{horizon}.png"
     plt.savefig(out, dpi=150, bbox_inches="tight")
@@ -222,25 +311,33 @@ def plot_heatmap(models, horizon, results_root, out_dir):
     plt.close()
 
 
+def generate_plots(models, horizons, results_root, out_dir, plot_type):
+    """Generate the requested plot set for each horizon."""
+    for horizon in horizons:
+        print(f"\nGenerating {plot_type} plots for horizon k={horizon}...")
+        if plot_type in ("all", "confusion"):
+            plot_confusion_matrices(models, horizon, results_root, out_dir)
+        if plot_type in ("all", "loss"):
+            plot_loss_curves(models, horizon, results_root, out_dir)
+        if plot_type in ("all", "importance"):
+            plot_feature_importance(models, horizon, results_root, out_dir)
+        if plot_type in ("all", "comparison", "comparison_avg"):
+            plot_comparison_avg(models, horizon, results_root, out_dir)
+        if plot_type in ("all", "comparison", "comparison_folds"):
+            plot_comparison_folds(models, horizon, results_root, out_dir)
+        if plot_type in ("all", "heatmap"):
+            plot_heatmap(models, horizon, results_root, out_dir)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Plot FI-2010 results")
-    parser.add_argument("--horizon", type=int, default=5, choices=[1, 5, 10])
+    parser.add_argument("--horizon", type=int, nargs="+", default=[5], choices=[1, 5, 10])
     parser.add_argument("--models", nargs="+", default=ALL_MODELS, choices=ALL_MODELS)
-    parser.add_argument("--plot", choices=["all", "confusion", "loss", "importance", "comparison", "heatmap"], default="all")
+    parser.add_argument("--plot", choices=PLOT_CHOICES, default="all")
     parser.add_argument("--results_root", type=str, default="./output")
     parser.add_argument("--out_dir", type=str, default="./reports")
     args = parser.parse_args()
-
-    if args.plot in ("all", "confusion"):
-        plot_confusion_matrices(args.models, args.horizon, args.results_root, args.out_dir)
-    if args.plot in ("all", "loss"):
-        plot_loss_curves(args.models, args.horizon, args.results_root, args.out_dir)
-    if args.plot in ("all", "importance"):
-        plot_feature_importance(args.models, args.horizon, args.results_root, args.out_dir)
-    if args.plot in ("all", "comparison"):
-        plot_comparison(args.models, args.horizon, args.results_root, args.out_dir)
-    if args.plot in ("all", "heatmap"):
-        plot_heatmap(args.models, args.horizon, args.results_root, args.out_dir)
+    generate_plots(args.models, args.horizon, args.results_root, args.out_dir, args.plot)
 
 
 if __name__ == "__main__":

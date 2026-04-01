@@ -26,7 +26,16 @@ MODEL_RUNNERS = {
     "mlp": run_mlp,
     "lstm": run_lstm,
 }
-PLOT_CHOICES = ["all", "confusion", "loss", "importance", "comparison", "heatmap"]
+PLOT_CHOICES = [
+    "all",
+    "confusion",
+    "loss",
+    "importance",
+    "comparison",
+    "comparison_avg",
+    "comparison_folds",
+    "heatmap",
+]
 
 
 def generate_plots(models, horizon, results_root, out_dir, plot_type):

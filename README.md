@@ -272,21 +272,25 @@ Generated outputs:
 - Summary CSV files are saved in `output/<model>/horizon_<k>/summary.csv`
 - Plots are generated separately with `python -m src.plot_results` and saved in `reports/`
 
-To generate plots from saved outputs:
+To generate plots from saved outputs for one or more horizons:
 
 ```bash
 source .venv/bin/activate
-python -m src.plot_results --horizon 5 --plot all
-```
 
-Useful reporting commands:
-
-```bash
-# Generate all plots for horizon k=5
+# One horizon e.g. k=5
 python -m src.plot_results --horizon 5 --plot all
 
-# Generate only the model comparison chart
+# Multiple horizons e.g. Generate all plots for horizons k=1, k=5, and k=10
+python -m src.plot_results --horizon 1 5 10 --plot all
+
+# Generate both average and per-fold comparison charts
 python -m src.plot_results --horizon 5 --plot comparison
+
+# Generate only the average comparison chart
+python -m src.plot_results --horizon 5 --plot comparison_avg
+
+# Generate only the per-fold comparison chart
+python -m src.plot_results --horizon 5 --plot comparison_folds
 
 # Generate plots for selected models only
 python -m src.plot_results --horizon 5 --models ridge logistic random_forest xgboost mlp lstm --plot all
