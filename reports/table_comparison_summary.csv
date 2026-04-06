@@ -1,0 +1,73 @@
+model,horizon,metric,mean,std
+Ridge Regression,1,F1 Macro,0.413430,0.008086
+Ridge Regression,1,Accuracy,0.522022,0.019693
+Ridge Regression,1,Precision,0.419351,0.004864
+Ridge Regression,1,Recall,0.446554,0.015112
+Ridge Regression,5,F1 Macro,0.437304,0.010913
+Ridge Regression,5,Accuracy,0.466116,0.002828
+Ridge Regression,5,Precision,0.444268,0.002917
+Ridge Regression,5,Recall,0.445345,0.007755
+Ridge Regression,10,F1 Macro,0.425266,0.014895
+Ridge Regression,10,Accuracy,0.428795,0.011071
+Ridge Regression,10,Precision,0.438325,0.002933
+Ridge Regression,10,Recall,0.439543,0.003240
+Logistic Regression,1,F1 Macro,0.413209,0.009068
+Logistic Regression,1,Accuracy,0.517666,0.021707
+Logistic Regression,1,Precision,0.420302,0.004655
+Logistic Regression,1,Recall,0.448309,0.015013
+Logistic Regression,5,F1 Macro,0.438323,0.010796
+Logistic Regression,5,Accuracy,0.466383,0.002370
+Logistic Regression,5,Precision,0.444682,0.003760
+Logistic Regression,5,Recall,0.446151,0.009272
+Logistic Regression,10,F1 Macro,0.429735,0.018056
+Logistic Regression,10,Accuracy,0.434572,0.015627
+Logistic Regression,10,Precision,0.443933,0.007097
+Logistic Regression,10,Recall,0.443940,0.004643
+MLP,1,F1 Macro,0.473620,0.011261
+MLP,1,Accuracy,0.584112,0.014541
+MLP,1,Precision,0.471185,0.008885
+MLP,1,Recall,0.510058,0.019766
+MLP,5,F1 Macro,0.490584,0.013380
+MLP,5,Accuracy,0.511827,0.013217
+MLP,5,Precision,0.492451,0.010988
+MLP,5,Recall,0.496406,0.012948
+MLP,10,F1 Macro,0.468570,0.022211
+MLP,10,Accuracy,0.474025,0.023144
+MLP,10,Precision,0.478031,0.013504
+MLP,10,Recall,0.478956,0.008960
+Random Forest,1,F1 Macro,0.531631,0.011073
+Random Forest,1,Accuracy,0.687170,0.028179
+Random Forest,1,Precision,0.528099,0.008265
+Random Forest,1,Recall,0.536053,0.014838
+Random Forest,5,F1 Macro,0.552444,0.023009
+Random Forest,5,Accuracy,0.588779,0.034684
+Random Forest,5,Precision,0.561764,0.025954
+Random Forest,5,Recall,0.552255,0.020875
+Random Forest,10,F1 Macro,0.435439,0.032736
+Random Forest,10,Accuracy,0.457514,0.035640
+Random Forest,10,Precision,0.478826,0.027863
+Random Forest,10,Recall,0.458597,0.028666
+XGBoost,1,F1 Macro,0.552352,0.015395
+XGBoost,1,Accuracy,0.673477,0.026666
+XGBoost,1,Precision,0.539307,0.014872
+XGBoost,1,Recall,0.577413,0.015253
+XGBoost,5,F1 Macro,0.566859,0.024039
+XGBoost,5,Accuracy,0.594124,0.033654
+XGBoost,5,Precision,0.573063,0.026682
+XGBoost,5,Recall,0.570655,0.018961
+XGBoost,10,F1 Macro,0.516864,0.026849
+XGBoost,10,Accuracy,0.518532,0.029125
+XGBoost,10,Precision,0.524166,0.023968
+XGBoost,10,Recall,0.525513,0.020972
+LSTM,1,F1 Macro,0.753357,0.006026
+LSTM,1,Accuracy,0.828789,0.009597
+LSTM,1,Precision,0.730047,0.008673
+LSTM,1,Recall,0.786289,0.004723
+LSTM,5,F1 Macro,0.783124,0.014027
+LSTM,5,Accuracy,0.800061,0.004087
+LSTM,5,Precision,0.781725,0.015750
+LSTM,5,Recall,0.784919,0.012288
+LSTM,10,F1 Macro,0.708014,0.024616
+LSTM,10,Accuracy,0.707956,0.022307
+LSTM,10,Precision,0.708384,0.023596
+LSTM,10,Recall,0.710093,0.024982

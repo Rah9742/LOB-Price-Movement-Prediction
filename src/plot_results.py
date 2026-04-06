@@ -10,9 +10,24 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-ALL_MODELS = ["ridge", "logistic", "random_forest", "xgboost", "mlp", "lstm"]
+plt.rcParams.update(
+    {
+        "font.family": "Times New Roman",
+    }
+)
+
+ALL_MODELS = ["ridge", "logistic", "random_forest", "xgboost", "mlp", "LSTM"]
 FOLDS = [7, 8, 9]
 CLASS_NAMES = ["Up", "Stationary", "Down"]
+MODEL_DISPLAY_NAMES = {
+    "ridge": "Ridge",
+    "logistic": "Logistic",
+    "random_forest": "Random Forest",
+    "xgboost": "XGBoost",
+    "mlp": "MLP",
+    "lstm": "LSTM",
+    "LSTM": "LSTM",
+}
 PLOT_CHOICES = [
     "all",
     "confusion",
@@ -51,12 +66,12 @@ def _annotate_matrix(ax, data, fmt, threshold=None):
         for col in range(data.shape[1]):
             value = data[row, col]
             color = "white" if value >= threshold else "#1f1f1f"
-            ax.text(col, row, format(value, fmt), ha="center", va="center", color=color, fontsize=8)
+            ax.text(col, row, format(value, fmt), ha="center", va="center", color=color, fontsize=16)
 
 
-def _draw_heatmap(ax, data, xlabels, ylabels, title, cmap, fmt, colorbar=True, aspect="auto"):
+def _draw_heatmap(ax, data, xlabels, ylabels, title, cmap, fmt, colorbar=True, aspect="auto", vmin=None, vmax=None):
     """Render a heatmap with adaptive text labels and optional colorbar."""
-    image = ax.imshow(data, cmap=cmap, aspect=aspect)
+    image = ax.imshow(data, cmap=cmap, aspect=aspect, vmin=vmin, vmax=vmax, interpolation="nearest")
     ax.set_title(title)
     ax.set_xticks(np.arange(len(xlabels)))
     ax.set_xticklabels(xlabels)
@@ -82,37 +97,77 @@ def _load_summary_rows(path):
 def plot_confusion_matrices(models, horizon, results_root, out_dir):
     ensure_dir(out_dir)
     for model in models:
-        fig, axes = plt.subplots(1, len(FOLDS), figsize=(5 * len(FOLDS), 4.5))
-        if len(FOLDS) == 1:
-            axes = [axes]
-        found = False
-        for i, fold in enumerate(FOLDS):
+        matrices = []
+        for fold in FOLDS:
             cm_path = Path(results_root) / model / f"horizon_{horizon}" / f"fold{fold}_confusion_matrix.npy"
             if not cm_path.exists():
+                matrices.append(None)
+                continue
+            cm = np.load(cm_path).astype(float)
+            row_sums = cm.sum(axis=1, keepdims=True)
+            normalized_cm = np.divide(cm, row_sums, out=np.zeros_like(cm, dtype=float), where=row_sums != 0)
+            matrices.append(normalized_cm)
+
+        if not any(cm is not None for cm in matrices):
+            continue
+
+        valid_matrices = [cm for cm in matrices if cm is not None]
+        vmax = 1.0
+        vmin = 0.0
+
+        fig, axes = plt.subplots(
+            1,
+            len(FOLDS),
+            figsize=(10.8, 3.55),
+            gridspec_kw={"wspace": 0.04},
+            constrained_layout=True,
+        )
+        if len(FOLDS) == 1:
+            axes = [axes]
+
+        last_image = None
+        for i, (fold, cm) in enumerate(zip(FOLDS, matrices)):
+            if cm is None:
                 axes[i].text(0.5, 0.5, "No data", ha="center", va="center", transform=axes[i].transAxes)
                 axes[i].set_title(f"Fold {fold}")
+                axes[i].set_axis_off()
                 continue
-            found = True
-            cm = np.load(cm_path)
-            _draw_heatmap(
+
+            last_image = _draw_heatmap(
                 axes[i],
                 cm,
                 CLASS_NAMES,
                 CLASS_NAMES,
                 f"Fold {fold}",
-                "Blues",
-                "d",
-                colorbar=True,
+                "PuBuGn",
+                ".3f",
+                colorbar=False,
                 aspect="equal",
+                vmin=vmin,
+                vmax=vmax,
             )
-            axes[i].set_title(f"Fold {fold}")
-            axes[i].set_xlabel("Predicted")
-            axes[i].set_ylabel("True")
-        if found:
-            fig.suptitle(f"{model.replace('_', ' ').title()} — Confusion Matrices (k={horizon})", fontsize=13, fontweight="bold")
-            plt.tight_layout()
+            axes[i].tick_params(axis="y", labelrotation=90, pad=2)
+            for label in axes[i].get_yticklabels():
+                label.set_verticalalignment("center")
+                label.set_horizontalalignment("center")
+                x_pos, y_pos = label.get_position()
+                label.set_position((x_pos - 0.03, y_pos))
+            if i == 0:
+                axes[i].set_ylabel("True", fontsize=11, labelpad=16)
+            else:
+                axes[i].set_ylabel("")
+            axes[i].set_xlabel("")
+        fig.supxlabel("Predicted", fontsize=11)
+        fig.suptitle(
+            f"{MODEL_DISPLAY_NAMES.get(model, model.replace('_', ' ').title())} — Confusion Matrices (Horizon {horizon})",
+            fontsize=15,
+            fontweight="bold",
+        )
+        if last_image is not None:
+            cbar = fig.colorbar(last_image, ax=axes, location="right", fraction=0.022, pad=0.02)
+            cbar.ax.set_ylabel("Proportion", rotation=90, labelpad=8)
             out = Path(out_dir) / f"cm_{model}_k{horizon}.png"
-            plt.savefig(out, dpi=150, bbox_inches="tight")
+            plt.savefig(out, dpi=720, bbox_inches="tight")
             print(f"  Saved: {out}")
         plt.close(fig)
 
