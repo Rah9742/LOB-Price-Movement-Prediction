@@ -10,9 +10,11 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from data_loader import FOLDS_TO_USE, HORIZON_TO_ROW, extract_features_labels, load_raw_file
 
 RESULTS_ROOT = Path("./output")
 REPORTS_DIR = Path("./reports")
+APPENDIX_DIR = REPORTS_DIR / "appendix_tables"
 HORIZONS = [1, 5, 10]
 MODELS = [
     ("ridge", "Ridge Regression"),
@@ -54,6 +56,11 @@ FEATURE_GROUPS = {
     "u8": (134, 140),
     "u9": (140, 144),
 }
+APPENDIX_B_MODELS = [
+    ("random_forest", "Random Forest"),
+    ("xgboost", "XGBoost"),
+    ("lstm", "LSTM"),
+]
 
 plt.rcParams.update(
     {
@@ -81,6 +88,38 @@ def ensure_dir(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
 
 
+def format_mean_std(mean: float, std: float) -> str:
+    return f"{mean:.3f} ± {std:.3f}"
+
+
+def _latex_escape(value: object) -> str:
+    return str(value).replace("_", r"\_")
+
+
+def write_table_files(base_path: Path, headers: list[str], rows: list[list[object]]) -> list[Path]:
+    csv_path = base_path.with_suffix(".csv")
+    tex_path = base_path.with_suffix(".tex")
+
+    with csv_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(headers)
+        writer.writerows(rows)
+
+    col_spec = "l" * len(headers)
+    with tex_path.open("w", encoding="utf-8") as handle:
+        handle.write("\\begin{tabular}{" + col_spec + "}\n")
+        handle.write("\\toprule\n")
+        handle.write(" & ".join(_latex_escape(header) for header in headers) + " \\\\\n")
+        handle.write("\\midrule\n")
+        for row in rows:
+            latex_row = [str(value).replace("±", "$\\pm$") for value in row]
+            handle.write(" & ".join(_latex_escape(value) for value in latex_row) + " \\\\\n")
+        handle.write("\\bottomrule\n")
+        handle.write("\\end{tabular}\n")
+
+    return [csv_path, tex_path]
+
+
 def load_summary_table(results_root: Path) -> dict[tuple[str, int], dict[str, dict[str, float]]]:
     """Load mean and sample std for each model/horizon/metric."""
     stats: dict[tuple[str, int], dict[str, dict[str, float]]] = {}
@@ -98,6 +137,13 @@ def load_summary_table(results_root: Path) -> dict[tuple[str, int], dict[str, di
                     "std": float(values.std(ddof=1)),
                 }
     return stats
+
+
+def load_model_summary_rows(results_root: Path, model_key: str, horizon: int) -> list[dict[str, str]]:
+    summary_path = results_root / model_key / f"horizon_{horizon}" / "summary.csv"
+    with summary_path.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        return list(reader)
 
 
 def plot_grouped_bars(stats: dict[tuple[str, int], dict[str, dict[str, float]]], out_dir: Path) -> Path:
@@ -374,6 +420,113 @@ def plot_feature_group_importance_combined(results_root: Path, out_dir: Path) ->
     return out_path
 
 
+def build_appendix_b_tables(results_root: Path, appendix_dir: Path) -> list[Path]:
+    headers = ["Model", "Horizon", "Fold 7", "Fold 8", "Fold 9", "Mean ± SD"]
+    rows: list[list[object]] = []
+
+    for model_key, model_label in APPENDIX_B_MODELS:
+        for horizon in HORIZONS:
+            summary_rows = load_model_summary_rows(results_root, model_key, horizon)
+            fold_rows = [row for row in summary_rows if row["fold"] != "AVG"]
+            mean_row = next(row for row in summary_rows if row["fold"] == "AVG")
+            fold_values = {row["fold"]: float(row["macro_f1"]) for row in fold_rows}
+            std = float(np.std(list(fold_values.values()), ddof=1))
+            rows.append(
+                [
+                    model_label,
+                    f"Horizon {horizon}",
+                    f"{fold_values['7']:.3f}",
+                    f"{fold_values['8']:.3f}",
+                    f"{fold_values['9']:.3f}",
+                    format_mean_std(float(mean_row["macro_f1"]), std),
+                ]
+            )
+
+    return write_table_files(appendix_dir / "appendix_b_fold_macro_f1", headers, rows)
+
+
+def build_appendix_c_tables() -> list[Path]:
+    headers = ["Horizon", "Up", "Stationary", "Down", "Total Test Samples"]
+    rows: list[list[object]] = []
+
+    for horizon in HORIZONS:
+        label_row = HORIZON_TO_ROW[horizon]
+        counts = np.zeros(3, dtype=int)
+        total = 0
+        for fold in FOLDS_TO_USE:
+            raw_test = load_raw_file("./data", "Test", fold)
+            _, y_test = extract_features_labels(raw_test, label_row)
+            counts[0] += int(np.sum(y_test == 1))
+            counts[1] += int(np.sum(y_test == 2))
+            counts[2] += int(np.sum(y_test == 3))
+            total += int(len(y_test))
+        rows.append(
+            [
+                f"Horizon {horizon}",
+                f"{counts[0] / total:.3f}",
+                f"{counts[1] / total:.3f}",
+                f"{counts[2] / total:.3f}",
+                total,
+            ]
+        )
+
+    return write_table_files(APPENDIX_DIR / "appendix_c_class_distribution", headers, rows)
+
+
+def build_appendix_d_tables(results_root: Path, appendix_dir: Path) -> list[Path]:
+    outputs: list[Path] = []
+    headers = ["Horizon", *FEATURE_GROUPS.keys()]
+
+    for model_key, model_label in [("random_forest", "random_forest"), ("xgboost", "xgboost")]:
+        rows: list[list[object]] = []
+        for horizon in HORIZONS:
+            fold_importances = []
+            for fold in FOLDS_TO_USE:
+                path = results_root / model_key / f"horizon_{horizon}" / f"fold{fold}_feature_importances.npy"
+                if path.exists():
+                    fold_importances.append(np.load(path))
+            if not fold_importances:
+                continue
+            avg_importance = np.mean(fold_importances, axis=0)
+            grouped = [float(avg_importance[start:end].sum()) for start, end in FEATURE_GROUPS.values()]
+            rows.append([f"Horizon {horizon}", *[f"{value:.3f}" for value in grouped]])
+        outputs.extend(write_table_files(appendix_dir / f"appendix_d_{model_label}_feature_groups", headers, rows))
+
+    return outputs
+
+
+def build_appendix_e_tables(results_root: Path, appendix_dir: Path) -> list[Path]:
+    headers = ["Horizon", "Class", "Precision", "Recall", "F1"]
+    rows: list[list[object]] = []
+    class_mappings = [
+        ("Up", "Up_P", "Up_R", "Up_F1"),
+        ("Stationary", "Stat_P", "Stat_R", "Stat_F1"),
+        ("Down", "Down_P", "Down_R", "Down_F1"),
+    ]
+
+    for horizon in HORIZONS:
+        summary_rows = load_model_summary_rows(results_root, "lstm", horizon)
+        fold_rows = [row for row in summary_rows if row["fold"] != "AVG"]
+        values_by_key = {
+            key: np.array([float(row[key]) for row in fold_rows], dtype=float)
+            for _, p_key, r_key, f_key in class_mappings
+            for key in (p_key, r_key, f_key)
+        }
+
+        for class_name, p_key, r_key, f_key in class_mappings:
+            rows.append(
+                [
+                    f"Horizon {horizon}",
+                    class_name,
+                    format_mean_std(float(values_by_key[p_key].mean()), float(values_by_key[p_key].std(ddof=1))),
+                    format_mean_std(float(values_by_key[r_key].mean()), float(values_by_key[r_key].std(ddof=1))),
+                    format_mean_std(float(values_by_key[f_key].mean()), float(values_by_key[f_key].std(ddof=1))),
+                ]
+            )
+
+    return write_table_files(appendix_dir / "appendix_e_lstm_classwise_metrics", headers, rows)
+
+
 def write_summary_csv(stats: dict[tuple[str, int], dict[str, dict[str, float]]], out_dir: Path) -> Path:
     out_path = out_dir / "table_comparison_summary.csv"
     with out_path.open("w", encoding="utf-8", newline="") as handle:
@@ -397,6 +550,7 @@ def write_summary_csv(stats: dict[tuple[str, int], dict[str, dict[str, float]]],
 
 def main() -> None:
     ensure_dir(REPORTS_DIR)
+    ensure_dir(APPENDIX_DIR)
     stats = load_summary_table(RESULTS_ROOT)
     outputs = [
         write_summary_csv(stats, REPORTS_DIR),
@@ -409,6 +563,10 @@ def main() -> None:
     combined_importance = plot_feature_group_importance_combined(RESULTS_ROOT, REPORTS_DIR)
     if combined_importance is not None:
         outputs.append(combined_importance)
+    outputs.extend(build_appendix_b_tables(RESULTS_ROOT, APPENDIX_DIR))
+    outputs.extend(build_appendix_c_tables())
+    outputs.extend(build_appendix_d_tables(RESULTS_ROOT, APPENDIX_DIR))
+    outputs.extend(build_appendix_e_tables(RESULTS_ROOT, APPENDIX_DIR))
     for output in outputs:
         print(f"Saved: {output}")
 
