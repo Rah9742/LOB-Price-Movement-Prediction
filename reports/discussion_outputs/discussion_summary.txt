@@ -1,0 +1,47 @@
+Available artefacts inspected:
+- Per-fold metrics JSONs for all models, horizons 1/5/10, folds 7/8/9
+- Per-fold predictions NPZs for all models
+- Per-fold confusion matrices for all models
+- Per-fold feature-importance arrays for XGBoost and Random Forest
+- Summary CSVs and report plots under reports/
+- No separate feature-name registry found; top individual features are reported as feature indices
+
+Next-best model after LSTM by horizon (mean macro F1 across folds 7-9):
+- k=1: xgboost
+- k=5: xgboost
+- k=10: xgboost
+
+Did LSTM beat XGBoost on all three folds?
+- k=1: yes
+- k=5: yes
+- k=10: yes
+
+Did XGBoost beat Random Forest on all three folds?
+- k=1: yes
+- k=5: no
+- k=10: yes
+
+Best horizon by mean macro F1:
+- ridge: k=5
+- logistic: k=5
+- random_forest: k=5
+- xgboost: k=5
+- mlp: k=5
+- lstm: k=5
+
+LSTM error pattern check:
+- k=1: movement vs stationary errors were more common (movement-vs-stationary=18392, up-vs-down=5215)
+- k=5: movement vs stationary errors were more common (movement-vs-stationary=17310, up-vs-down=10637)
+- k=10: movement vs stationary errors were more common (movement-vs-stationary=23518, up-vs-down=17629)
+
+XGBoost feature-importance stability:
+- k=1: u6 > u1 > u2 > u3 > u7 > u5 > u4 > u8 > u9
+- k=5: u6 > u1 > u3 > u2 > u5 > u8 > u4 > u7 > u9
+- k=10: u6 > u1 > u2 > u3 > u5 > u7 > u8 > u4 > u9
+- Ranking identical across horizons: no
+- u6 ranked first and u1 ranked second at all horizons: yes
+
+Random Forest grouped ranking compared with XGBoost:
+- k=1: u6 > u1 > u5 > u2 > u7 > u3 > u8 > u4 > u9 (not identical top-3 pattern)
+- k=5: u1 > u6 > u2 > u3 > u4 > u5 > u7 > u8 > u9 (not identical top-3 pattern)
+- k=10: u1 > u6 > u2 > u3 > u4 > u5 > u7 > u8 > u9 (not identical top-3 pattern)

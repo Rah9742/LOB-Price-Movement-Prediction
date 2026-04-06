@@ -36,8 +36,24 @@ MODEL_COLORS = {
     "XGBoost": "#b279a2",
     "LSTM": "#48A999",
 }
+HORIZON_COLORS = {
+    1: "#5B7DB1",
+    5: "#D48A62",
+    10: "#4FA987",
+}
 Y_AXIS_MIN = 0.35
 Y_AXIS_MAX = 0.85
+FEATURE_GROUPS = {
+    "u1": (0, 40),
+    "u2": (40, 60),
+    "u3": (60, 82),
+    "u4": (82, 86),
+    "u5": (86, 88),
+    "u6": (88, 128),
+    "u7": (128, 134),
+    "u8": (134, 140),
+    "u9": (140, 144),
+}
 
 plt.rcParams.update(
     {
@@ -227,6 +243,137 @@ def plot_radar(stats: dict[tuple[str, int], dict[str, dict[str, float]]], out_di
     return out_path
 
 
+def plot_feature_group_importance(results_root: Path, out_dir: Path) -> list[Path]:
+    outputs: list[Path] = []
+    tree_models = [("random_forest", "Random Forest"), ("xgboost", "XGBoost")]
+
+    for model_key, model_label in tree_models:
+        grouped_importances: dict[int, list[float]] = {}
+        for horizon in HORIZONS:
+            fold_importances = []
+            for fold in (7, 8, 9):
+                path = results_root / model_key / f"horizon_{horizon}" / f"fold{fold}_feature_importances.npy"
+                if path.exists():
+                    fold_importances.append(np.load(path))
+            if not fold_importances:
+                continue
+
+            avg_importance = np.mean(fold_importances, axis=0)
+            grouped_importances[horizon] = [
+                float(avg_importance[start:end].sum()) for start, end in FEATURE_GROUPS.values()
+            ]
+
+        if not grouped_importances:
+            continue
+
+        fig, ax = plt.subplots(figsize=(10.5, 4.8))
+        x = np.arange(len(FEATURE_GROUPS))
+        labels = list(FEATURE_GROUPS.keys())
+
+        for horizon in HORIZONS:
+            if horizon not in grouped_importances:
+                continue
+            ax.plot(
+                x,
+                grouped_importances[horizon],
+                marker="o",
+                markersize=8,
+                linewidth=2.5,
+                color=HORIZON_COLORS[horizon],
+                label=f"Horizon {horizon}",
+            )
+
+        ax.set_xticks(x, labels)
+        ax.set_xlabel("Feature Group")
+        ax.set_ylabel("Total Importance")
+        ax.set_title(f"{model_label} — Total Feature Importance by Group", fontweight="bold")
+        ax.grid(axis="y", alpha=0.25)
+        ax.set_axisbelow(True)
+        ax.legend(loc="upper center", bbox_to_anchor=(0.5, 1.18), ncols=3, frameon=False)
+        fig.tight_layout()
+
+        out_path = out_dir / f"table_comparison_importance_{model_key}_groups.png"
+        fig.savefig(out_path, bbox_inches="tight")
+        plt.close(fig)
+        outputs.append(out_path)
+
+    return outputs
+
+
+def plot_feature_group_importance_combined(results_root: Path, out_dir: Path) -> Path | None:
+    grouped_by_model: dict[str, dict[int, list[float]]] = {}
+    model_labels = {
+        "random_forest": "Random Forest",
+        "xgboost": "XGBoost",
+    }
+
+    for model_key in model_labels:
+        grouped_by_model[model_key] = {}
+        for horizon in HORIZONS:
+            fold_importances = []
+            for fold in (7, 8, 9):
+                path = results_root / model_key / f"horizon_{horizon}" / f"fold{fold}_feature_importances.npy"
+                if path.exists():
+                    fold_importances.append(np.load(path))
+            if not fold_importances:
+                continue
+
+            avg_importance = np.mean(fold_importances, axis=0)
+            grouped_by_model[model_key][horizon] = [
+                float(avg_importance[start:end].sum()) for start, end in FEATURE_GROUPS.values()
+            ]
+
+    if not any(grouped_by_model[model_key] for model_key in grouped_by_model):
+        return None
+
+    fig, ax = plt.subplots(figsize=(11.5, 5.2))
+    x = np.arange(len(FEATURE_GROUPS))
+    labels = list(FEATURE_GROUPS.keys())
+    line_styles = {
+        "random_forest": "-",
+        "xgboost": "--",
+    }
+    marker_styles = {
+        "random_forest": "o",
+        "xgboost": "s",
+    }
+    legend_entries = []
+
+    for model_key, horizon_values in grouped_by_model.items():
+        for horizon in HORIZONS:
+            if horizon not in horizon_values:
+                continue
+            (line,) = ax.plot(
+                x,
+                horizon_values[horizon],
+                linestyle=line_styles[model_key],
+                marker=marker_styles[model_key],
+                markersize=7,
+                linewidth=1.7,
+                color=HORIZON_COLORS[horizon],
+                label=f"{model_labels[model_key]}, Horizon {horizon}",
+            )
+            legend_entries.append((line, f"{model_labels[model_key]}, Horizon {horizon}"))
+
+    ax.set_xticks(x, labels)
+    ax.set_xlabel("Feature Group")
+    ax.set_ylabel("Total Importance")
+    ax.grid(axis="y", alpha=0.25)
+    ax.set_axisbelow(True)
+    handles, labels = zip(*legend_entries)
+    row_major_order = [0, 3, 1, 4, 2, 5]
+    ordered_handles = [handles[idx] for idx in row_major_order]
+    ordered_labels = [labels[idx] for idx in row_major_order]
+    ax.legend(ordered_handles, ordered_labels, loc="upper center", bbox_to_anchor=(0.5, 1.26), ncols=3, frameon=True, fontsize=12)
+    fig.suptitle("Random Forest and XGBoost — Total Feature Importance by Group", fontweight="bold", y=0.78)
+    fig.tight_layout(rect=(0, 0, 1, 0.93))
+
+    out_path = out_dir / "table_comparison_importance_tree_models_combined.png"
+    fig.savefig(out_path, bbox_inches="tight")
+    plt.close(fig)
+    return out_path
+
+
 def write_summary_csv(stats: dict[tuple[str, int], dict[str, dict[str, float]]], out_dir: Path) -> Path:
     out_path = out_dir / "table_comparison_summary.csv"
     with out_path.open("w", encoding="utf-8", newline="") as handle:
@@ -258,6 +405,10 @@ def main() -> None:
         plot_heatmap(stats, REPORTS_DIR),
         plot_radar(stats, REPORTS_DIR),
     ]
+    outputs.extend(plot_feature_group_importance(RESULTS_ROOT, REPORTS_DIR))
+    combined_importance = plot_feature_group_importance_combined(RESULTS_ROOT, REPORTS_DIR)
+    if combined_importance is not None:
+        outputs.append(combined_importance)
     for output in outputs:
         print(f"Saved: {output}")
 

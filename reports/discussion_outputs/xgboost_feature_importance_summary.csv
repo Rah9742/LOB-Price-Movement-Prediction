@@ -1,0 +1,58 @@
+horizon,item_type,item_id,item_name,rank,importance,start_feature_index_1based,end_feature_index_1based
+1,feature,f134,feature_134,1,0.054029,134,134
+1,feature,f89,feature_89,2,0.050489,89,89
+1,feature,f87,feature_87,3,0.045417,87,87
+1,feature,f19,feature_19,4,0.013823,19,19
+1,feature,f135,feature_135,5,0.011834,135,135
+1,feature,f9,feature_9,6,0.011408,9,9
+1,feature,f91,feature_91,7,0.011289,91,91
+1,feature,f51,feature_51,8,0.010563,51,51
+1,feature,f70,feature_70,9,0.010437,70,70
+1,feature,f128,feature_128,10,0.010229,128,128
+1,group,u6,P&V Deriv,1,0.277121,89,128
+1,group,u1,Basic LOB,2,0.266728,1,40
+1,group,u2,Spread/Mid,3,0.149128,41,60
+1,group,u3,Price Diff,4,0.132682,61,82
+1,group,u7,Avg Intens,5,0.068268,129,134
+1,group,u5,Accum Diff,6,0.054,87,88
+1,group,u4,P&V Means,7,0.023216,83,86
+1,group,u8,Rel Intens,8,0.022948,135,140
+1,group,u9,Intens Accel,9,0.005909,141,144
+5,feature,f89,feature_89,1,0.086396,89,89
+5,feature,f87,feature_87,2,0.076134,87,87
+5,feature,f82,feature_82,3,0.021475,82,82
+5,feature,f135,feature_135,4,0.020088,135,135
+5,feature,f93,feature_93,5,0.019715,93,93
+5,feature,f55,feature_55,6,0.018901,55,55
+5,feature,f99,feature_99,7,0.015616,99,99
+5,feature,f94,feature_94,8,0.015138,94,94
+5,feature,f13,feature_13,9,0.014993,13,13
+5,feature,f70,feature_70,10,0.014216,70,70
+5,group,u6,P&V Deriv,1,0.343079,89,128
+5,group,u1,Basic LOB,2,0.232256,1,40
+5,group,u3,Price Diff,3,0.138663,61,82
+5,group,u2,Spread/Mid,4,0.122413,41,60
+5,group,u5,Accum Diff,5,0.089068,87,88
+5,group,u8,Rel Intens,6,0.02853,135,140
+5,group,u4,P&V Means,7,0.021018,83,86
+5,group,u7,Avg Intens,8,0.019316,129,134
+5,group,u9,Intens Accel,9,0.005657,141,144
+10,feature,f56,feature_56,1,0.048004,56,56
+10,feature,f27,feature_27,2,0.03524,27,27
+10,feature,f89,feature_89,3,0.031239,89,89
+10,feature,f15,feature_15,4,0.029074,15,15
+10,feature,f94,feature_94,5,0.023147,94,94
+10,feature,f92,feature_92,6,0.022381,92,92
+10,feature,f87,feature_87,7,0.022204,87,87
+10,feature,f88,feature_88,8,0.020714,88,88
+10,feature,f90,feature_90,9,0.020564,90,90
+10,feature,f108,feature_108,10,0.020142,108,108
+10,group,u6,P&V Deriv,1,0.341295,89,128
+10,group,u1,Basic LOB,2,0.26329,1,40
+10,group,u2,Spread/Mid,3,0.149791,41,60
+10,group,u3,Price Diff,4,0.132396,61,82
+10,group,u5,Accum Diff,5,0.042918,87,88
+10,group,u7,Avg Intens,6,0.023069,129,134
+10,group,u8,Rel Intens,7,0.020222,135,140
+10,group,u4,P&V Means,8,0.020014,83,86
+10,group,u9,Intens Accel,9,0.007006,141,144

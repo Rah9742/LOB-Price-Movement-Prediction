@@ -1,0 +1,28 @@
+horizon,item_type,item_id,item_name,rank,importance,start_feature_index_1based,end_feature_index_1based
+1,group,u6,P&V Deriv,1,0.523926,89,128
+1,group,u1,Basic LOB,2,0.177073,1,40
+1,group,u5,Accum Diff,3,0.070242,87,88
+1,group,u2,Spread/Mid,4,0.068747,41,60
+1,group,u7,Avg Intens,5,0.060456,129,134
+1,group,u3,Price Diff,6,0.044721,61,82
+1,group,u8,Rel Intens,7,0.029484,135,140
+1,group,u4,P&V Means,8,0.018133,83,86
+1,group,u9,Intens Accel,9,0.007218,141,144
+5,group,u1,Basic LOB,1,0.349573,1,40
+5,group,u6,P&V Deriv,2,0.33353,89,128
+5,group,u2,Spread/Mid,3,0.106471,41,60
+5,group,u3,Price Diff,4,0.080459,61,82
+5,group,u4,P&V Means,5,0.041581,83,86
+5,group,u5,Accum Diff,6,0.031399,87,88
+5,group,u7,Avg Intens,7,0.025871,129,134
+5,group,u8,Rel Intens,8,0.018298,135,140
+5,group,u9,Intens Accel,9,0.012817,141,144
+10,group,u1,Basic LOB,1,0.359296,1,40
+10,group,u6,P&V Deriv,2,0.290421,89,128
+10,group,u2,Spread/Mid,3,0.128909,41,60
+10,group,u3,Price Diff,4,0.104226,61,82
+10,group,u4,P&V Means,5,0.044921,83,86
+10,group,u5,Accum Diff,6,0.026168,87,88
+10,group,u7,Avg Intens,7,0.021447,129,134
+10,group,u8,Rel Intens,8,0.013944,135,140
+10,group,u9,Intens Accel,9,0.010669,141,144
